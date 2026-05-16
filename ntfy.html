@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="data:image/png;base64,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"/>
+    <title>ntfy Webhook Scheduler</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1d29 0%, #2d3142 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px;
+            color: #e4e6eb;
+        }
+
+        .container {
+            background: #2a2d3e;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.4);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 28px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+        .header p  { color: #9ca3af; font-size: 14px; }
+
+        .form-group { margin-bottom: 24px; }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #b8bcc8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="time"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            background: #1f2230;
+            border: 1px solid #3a3d4e;
+            border-radius: 8px;
+            color: #e4e6eb;
+            font-size: 15px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            transition: all .2s;
+            outline: none;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: #5b9bd5;
+            box-shadow: 0 0 0 3px rgba(91,155,213,.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23b8bcc8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(to right, #4ade80 0%, #5b9bd5 50%, #f87171 100%);
+            border-radius: 3px;
+            outline: none;
+            padding: 0;
+            margin: 12px 0;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 20px; height: 20px;
+            background: #fff; border: 3px solid #5b9bd5; border-radius: 50%;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.3); transition: all .2s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); border-color: #4a8bc2; }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px; background: #fff;
+            border: 3px solid #5b9bd5; border-radius: 50%;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        }
+
+        .priority-labels { display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        #priorityValue { color: #5b9bd5; font-weight: 700; }
+
+        .date-time-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .time-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+        .time-shortcut-btn {
+            padding: 8px 16px;
+            background: #3a3d4e;
+            border: 1px solid #464956;
+            border-radius: 6px;
+            color: #b8bcc8;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .time-shortcut-btn:hover { background: #464956; border-color: #5b9bd5; color: #e4e6eb; transform: translateY(-1px); }
+
+        /* Recurring toggle */
+        .toggle-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px;
+            background: #1f2230;
+            border: 1px solid #3a3d4e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color .2s;
+            user-select: none;
+        }
+        .toggle-row:hover, .toggle-row.active { border-color: #5b9bd5; }
+        .toggle-row.active { background: rgba(91,155,213,.05); }
+
+        .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; inset: 0;
+            background: #3a3d4e; border-radius: 22px; transition: .2s; cursor: pointer;
+        }
+        .toggle-slider:before {
+            content: ''; position: absolute;
+            width: 16px; height: 16px; left: 3px; top: 3px;
+            background: #b8bcc8; border-radius: 50%; transition: .2s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: #5b9bd5; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); background: #fff; }
+
+        .recurring-options {
+            display: none;
+            margin-top: 14px;
+            padding: 16px;
+            background: #1f2230;
+            border: 1px solid #3a3d4e;
+            border-radius: 8px;
+        }
+        .recurring-options.visible { display: block; }
+
+        .interval-row { display: grid; grid-template-columns: 90px 1fr; gap: 12px; }
+
+        /* Buttons */
+        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+
+        button {
+            padding: 14px 24px; border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button[type="submit"] {
+            background: linear-gradient(135deg, #5b9bd5 0%, #4a8bc2 100%);
+            color: white; box-shadow: 0 4px 12px rgba(91,155,213,.3);
+        }
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(91,155,213,.4); }
+        button[type="button"] { background: #3a3d4e; color: #b8bcc8; }
+        button[type="button"]:hover { background: #464956; color: #e4e6eb; }
+
+        /* Reminders list */
+        .reminders-section { margin-top: 40px; padding-top: 32px; border-top: 1px solid #3a3d4e; }
+
+        .reminders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .reminders-title { font-size: 13px; font-weight: 600; color: #b8bcc8; text-transform: uppercase; letter-spacing: .5px; }
+        .reminders-count { font-size: 12px; color: #5b9bd5; font-weight: 600; }
+
+        .reminder-item {
+            background: #1f2230; border: 1px solid #3a3d4e; border-radius: 8px;
+            padding: 14px 16px; margin-bottom: 10px;
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+            transition: border-color .2s;
+        }
+        .reminder-item:hover { border-color: #464956; }
+        .reminder-item.recurring-item { border-left: 3px solid #5b9bd5; }
+
+        .reminder-info { flex: 1; min-width: 0; }
+        .reminder-message { font-size: 14px; color: #e4e6eb; font-weight: 500; margin-bottom: 5px; word-break: break-word; }
+        .reminder-meta { font-size: 12px; color: #6b7280; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .badge-recurring { background: rgba(91,155,213,.15); color: #5b9bd5; border: 1px solid rgba(91,155,213,.3); }
+        .badge-once      { background: rgba(156,163,175,.1); color: #9ca3af; border: 1px solid rgba(156,163,175,.2); }
+
+        .delete-btn {
+            background: none; border: 1px solid #3a3d4e; color: #6b7280;
+            padding: 6px 10px; font-size: 13px; border-radius: 6px; cursor: pointer;
+            transition: all .2s; flex-shrink: 0; width: auto;
+        }
+        .delete-btn:hover { background: rgba(248,113,113,.1); border-color: #f87171; color: #f87171; transform: none; box-shadow: none; }
+
+        .empty-state { text-align: center; padding: 32px 0; color: #4b5563; font-size: 14px; }
+
+        .notification {
+            position: fixed; top: 20px; right: 20px;
+            background: #4ade80; color: #1e1e2e;
+            padding: 14px 20px; border-radius: 8px; font-weight: 600; font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
+            opacity: 0; transform: translateY(-20px); transition: all .3s; z-index: 2000;
+        }
+        .notification.show { opacity: 1; transform: translateY(0); }
+        .notification.error { background: #f87171; color: #fff; }
+
+        @media (max-width: 640px) {
+            .container { padding: 24px; }
+            .date-time-group, .button-group { grid-template-columns: 1fr; }
+            .interval-row { grid-template-columns: 80px 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📬 ntfy Scheduler</h1>
+    </div>
+
+    <form id="ntfyForm">
+        <div class="form-group">
+            <label class="form-label" for="note">Message</label>
+            <textarea id="note" placeholder="Enter your notification message" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="priority">Priority: <span id="priorityValue">3</span></label>
+            <input type="range" id="priority" min="1" max="5" value="3" step="1">
+            <div class="priority-labels">
+                <span>Low</span><span>Default</span><span>Critical</span>
+            </div>
+        </div>
+
+        <div class="date-time-group">
+            <div class="form-group">
+                <label class="form-label" for="date">Date</label>
+                <input type="date" id="date" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="time">Time</label>
+                <input type="time" id="time" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Quick Time Shortcuts</label>
+            <div class="time-shortcuts">
+                <button type="button" class="time-shortcut-btn" data-hours="3">3 hrs</button>
+                <button type="button" class="time-shortcut-btn" data-hours="6">6 hrs</button>
+                <button type="button" class="time-shortcut-btn" data-hours="9">9 hrs</button>
+                <button type="button" class="time-shortcut-btn" data-hours="12">12 hrs</button>
+                <button type="button" class="time-shortcut-btn" data-hours="18">18 hrs</button>
+                <button type="button" class="time-shortcut-btn" data-hours="24">24 hrs</button>
+                <button type="button" class="time-shortcut-btn" data-hours="36">36 hrs</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Recurrence</label>
+            <label class="toggle-row" id="toggleRow">
+                <span class="toggle-switch">
+                    <input type="checkbox" id="recurringToggle">
+                    <span class="toggle-slider"></span>
+                </span>
+                <span class="toggle-label">Repeat this reminder</span>
+            </label>
+            <div class="recurring-options" id="recurringOptions">
+                <label class="form-label" style="margin-bottom:10px;">Repeat every</label>
+                <div class="interval-row">
+                    <input type="number" id="intervalValue" min="1" max="999" value="1">
+                    <select id="intervalType">
+                        <option value="hours">Hours</option>
+                        <option value="days" selected>Days</option>
+                        <option value="weeks">Weeks</option>
+                        <option value="months">Months</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="submit"><span>📤</span><span>Schedule</span></button>
+            <button type="button" id="resetButton"><span>🔄</span><span>Reset</span></button>
+        </div>
+    </form>
+
+    <div class="reminders-section">
+        <div class="reminders-header">
+            <span class="reminders-title">Scheduled Reminders</span>
+            <span class="reminders-count" id="remindersCount"></span>
+        </div>
+        <div id="remindersContainer"><div class="empty-state">Loading…</div></div>
+    </div>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<script>
+    const SCHEDULE_URL  = '/schedule';
+    const REMINDERS_URL = '/reminders';
+
+    let editingId = null; // null = creating new, string = editing existing
+
+    const noteField       = document.getElementById('note');
+    const dateField       = document.getElementById('date');
+    const timeField       = document.getElementById('time');
+    const prioritySlider  = document.getElementById('priority');
+    const priorityValue   = document.getElementById('priorityValue');
+    const recurringToggle = document.getElementById('recurringToggle');
+    const recurringOptions = document.getElementById('recurringOptions');
+    const toggleRow       = document.getElementById('toggleRow');
+
+    prioritySlider.addEventListener('input', e => { priorityValue.textContent = e.target.value; });
+
+    recurringToggle.addEventListener('change', function () {
+        recurringOptions.classList.toggle('visible', this.checked);
+        toggleRow.classList.toggle('active', this.checked);
+    });
+
+    document.querySelectorAll('.time-shortcut-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const d = new Date();
+            d.setHours(d.getHours() + parseInt(this.dataset.hours));
+            dateField.value = d.toISOString().split('T')[0];
+            timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+        });
+    });
+
+    function showNotification(msg, isError = false) {
+        const n = document.getElementById('notification');
+        n.textContent = msg;
+        n.className = 'notification' + (isError ? ' error' : '');
+        setTimeout(() => n.classList.add('show'), 10);
+        setTimeout(() => n.classList.remove('show'), 3000);
+    }
+
+    function resetForm() {
+        editingId = null;
+        document.querySelector('button[type="submit"] span:last-child').textContent = 'Schedule';
+        noteField.value = '';
+        prioritySlider.value = 3;
+        priorityValue.textContent = '3';
+        recurringToggle.checked = false;
+        recurringOptions.classList.remove('visible');
+        toggleRow.classList.remove('active');
+        document.getElementById('intervalValue').value = 1;
+        document.getElementById('intervalType').value = 'days';
+        const d = new Date();
+        d.setMinutes(d.getMinutes() + 1);
+        dateField.value = d.toISOString().split('T')[0];
+        timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+    }
+
+    // Default: 1 minute from now
+    (() => {
+        const d = new Date();
+        d.setMinutes(d.getMinutes() + 1);
+        dateField.value = d.toISOString().split('T')[0];
+        timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+    })();
+
+    function validateTime() {
+        const sel = new Date(`${dateField.value}T${timeField.value}`);
+        if (sel < new Date()) {
+            const d = new Date();
+            d.setMinutes(d.getMinutes() + 1);
+            dateField.value = d.toISOString().split('T')[0];
+            timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+        }
+    }
+
+    dateField.addEventListener('blur', validateTime);
+    timeField.addEventListener('blur', validateTime);
+
+    document.getElementById('ntfyForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        validateTime();
+
+        const isRecurring = recurringToggle.checked;
+        const payload = {
+            message:        noteField.value,
+            priority:       parseInt(prioritySlider.value),
+            next_fire:      Math.floor(new Date(`${dateField.value}T${timeField.value}`).getTime() / 1000),
+            recurring:      isRecurring,
+            interval_type:  isRecurring ? document.getElementById('intervalType').value : null,
+            interval_value: isRecurring ? parseInt(document.getElementById('intervalValue').value) : null,
+            tag:            'mailbox_with_mail',
+        };
+
+        const url    = editingId ? `${REMINDERS_URL}/${editingId}` : SCHEDULE_URL;
+        const method = editingId ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (resp.ok) {
+                showNotification(editingId ? '✓ Reminder updated!' : '✓ Reminder scheduled!');
+                resetForm();
+                loadReminders();
+            } else {
+                showNotification('✗ Failed.', true);
+            }
+        } catch (err) {
+            showNotification('✗ Error: ' + err.message, true);
+        }
+    });
+
+    document.getElementById('resetButton').addEventListener('click', resetForm);
+
+    // ── Reminders List ────────────────────────────────────────────────────
+    function formatDateTime(ts) {
+        return new Date(ts * 1000).toLocaleString(undefined, {
+            weekday: 'short', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    function formatInterval(type, value) {
+        const map = { hours: 'hr', days: 'day', weeks: 'wk', months: 'mo' };
+        const unit = (map[type] || type) + (value > 1 ? 's' : '');
+        return `every ${value} ${unit}`;
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function editReminder(r) {
+        editingId = r.id;
+        document.querySelector('button[type="submit"] span:last-child').textContent = 'Update';
+
+        noteField.value = r.message;
+        prioritySlider.value = r.priority;
+        priorityValue.textContent = r.priority;
+
+        const d = new Date(r.next_fire * 1000);
+        dateField.value = d.toISOString().split('T')[0];
+        timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+
+        const isRecurring = !!r.recurring;
+        recurringToggle.checked = isRecurring;
+        recurringOptions.classList.toggle('visible', isRecurring);
+        toggleRow.classList.toggle('active', isRecurring);
+        if (isRecurring) {
+            document.getElementById('intervalValue').value = r.interval_value || 1;
+            document.getElementById('intervalType').value  = r.interval_type  || 'days';
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteReminder(id) {
+        await fetch(`${REMINDERS_URL}/${id}`, { method: 'DELETE' });
+        loadReminders();
+    }
+
+    async function loadReminders() {
+        const container = document.getElementById('remindersContainer');
+        const countEl   = document.getElementById('remindersCount');
+        try {
+            const reminders = await fetch(REMINDERS_URL).then(r => r.json());
+            countEl.textContent = reminders.length ? `${reminders.length} pending` : '';
+
+            if (!reminders.length) {
+                container.innerHTML = '<div class="empty-state">No scheduled reminders</div>';
+                return;
+            }
+
+            container.innerHTML = reminders.map(r => `
+                <div class="reminder-item ${r.recurring ? 'recurring-item' : ''}">
+                    <div class="reminder-info">
+                        <div class="reminder-message">${escapeHtml(r.message)}</div>
+                        <div class="reminder-meta">
+                            <span>🕐 ${formatDateTime(r.next_fire)}</span>
+                            <span>⚡ P${r.priority}</span>
+                            <span class="badge ${r.recurring ? 'badge-recurring' : 'badge-once'}">
+                                ${r.recurring ? '🔁 ' + formatInterval(r.interval_type, r.interval_value) : '1× once'}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                        <button class="delete-btn" onclick="editReminder(${JSON.stringify(r).replace(/"/g, '&quot;')})">✏</button>
+                        <button class="delete-btn" onclick="deleteReminder('${r.id}')">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch {
+            container.innerHTML = '<div class="empty-state">⚠ Could not load — is the server running?</div>';
+            countEl.textContent = '';
+        }
+    }
+
+    loadReminders();
+    setInterval(loadReminders, 30000);
+</script>
+</body>
+</html>
