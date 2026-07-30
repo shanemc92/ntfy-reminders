@@ -74,6 +74,10 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
+        #titleSelect {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
         select {
             cursor: pointer;
             appearance: none;
@@ -181,12 +185,64 @@
         button[type="button"] { background: #3a3d4e; color: #b8bcc8; }
         button[type="button"]:hover { background: #464956; color: #e4e6eb; }
 
+        .title-select-row { display: flex; gap: 8px; align-items: stretch; }
+        .title-select-row select { flex: 1; }
+
+        .title-manage-btn {
+            width: 48px; flex-shrink: 0;
+            background: #1f2230; border: 1px solid #3a3d4e; border-radius: 8px;
+            color: #5b9bd5; font-size: 20px; font-weight: 400; line-height: 1;
+            cursor: pointer; transition: all .2s;
+        }
+        .title-manage-btn:hover { background: #262a3a; border-color: #5b9bd5; color: #7db8e8; transform: none; box-shadow: none; }
+        .title-manage-btn.active { background: rgba(91,155,213,.12); border-color: #5b9bd5; color: #7db8e8; transform: rotate(45deg); }
+
+        .title-manager {
+            display: none;
+            margin-top: 10px;
+            padding: 14px;
+            background: #1f2230;
+            border: 1px solid #3a3d4e;
+            border-radius: 8px;
+        }
+        .title-manager.visible { display: block; }
+
+        .title-manager-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .title-manager-row input[type="text"] { padding: 8px 10px; font-size: 13px; flex: 1; min-width: 100px; }
+        .title-manager-row button {
+            padding: 6px 10px; font-size: 12px; width: auto; flex-shrink: 0;
+            background: #3a3d4e; color: #b8bcc8;
+        }
+        .title-manager-row button:hover { background: #464956; color: #e4e6eb; }
+        .title-manager-row .title-delete-btn:hover { background: rgba(248,113,113,.1); color: #f87171; }
+        .title-current-emoji { font-size: 16px; width: 22px; flex-shrink: 0; text-align: center; }
+
+        .title-manager-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .title-manager-add input[type="text"] { padding: 8px 10px; font-size: 13px; flex: 1; min-width: 100px; }
+        .title-manager-add button {
+            width: auto; flex-shrink: 0; padding: 8px 16px; font-size: 13px;
+            background: linear-gradient(135deg, #5b9bd5 0%, #4a8bc2 100%); color: #fff;
+        }
+
+        .emoji-picker { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
+        .emoji-swatch {
+            width: 34px; height: 34px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; background: #1a1d29; border: 1px solid #3a3d4e; border-radius: 6px;
+            cursor: pointer; transition: all .2s; padding: 0;
+        }
+        .emoji-swatch:hover { border-color: #5b9bd5; background: #262a3a; transform: none; box-shadow: none; }
+        .emoji-swatch.selected { border-color: #5b9bd5; background: rgba(91,155,213,.15); color: #fff; }
+
         /* Reminders list */
         .reminders-section { margin-top: 40px; padding-top: 32px; border-top: 1px solid #3a3d4e; }
 
-        .reminders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .reminders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; cursor: pointer; user-select: none; }
+        .reminders-title-row { display: flex; align-items: center; gap: 8px; }
         .reminders-title { font-size: 13px; font-weight: 600; color: #b8bcc8; text-transform: uppercase; letter-spacing: .5px; }
         .reminders-count { font-size: 12px; color: #5b9bd5; font-weight: 600; }
+        .reminders-chevron { color: #6b7280; font-size: 12px; transition: transform .2s; }
+        .reminders-chevron.open { transform: rotate(90deg); }
 
         .reminder-item {
             background: #1f2230; border: 1px solid #3a3d4e; border-radius: 8px;
@@ -228,6 +284,8 @@
             .container { padding: 24px; }
             .date-time-group, .button-group { grid-template-columns: 1fr; }
             .interval-row { grid-template-columns: 80px 1fr; }
+            .emoji-swatch { width: 30px; height: 30px; font-size: 14px; }
+            .title-manage-btn { width: 44px; }
         }
     </style>
 </head>
@@ -238,6 +296,25 @@
     </div>
 
     <form id="ntfyForm">
+        <div class="form-group">
+            <label class="form-label" for="titleSelect">Title</label>
+            <div class="title-select-row">
+                <select id="titleSelect"></select>
+                <button type="button" class="title-manage-btn" id="manageTitlesBtn" title="Manage titles">+</button>
+            </div>
+            <div class="title-manager" id="titleManager">
+                <div id="titleManagerList"></div>
+                <div class="title-manager-add">
+                    <input type="text" id="newTitleInput" placeholder="e.g. Housework">
+                    <button type="button" id="addTitleBtn">Add</button>
+                </div>
+                <div class="emoji-picker" id="newEmojiPicker">
+                    <button type="button" class="emoji-swatch selected" data-code="" title="No emoji">✕</button>
+                </div>
+            </div>
+        </div>
+
+
         <div class="form-group">
             <label class="form-label" for="note">Message</label>
             <textarea id="note" placeholder="Enter your notification message" required></textarea>
@@ -265,8 +342,8 @@
         <div class="form-group">
             <label class="form-label">Quick Time Shortcuts</label>
             <div class="time-shortcuts">
+                <button type="button" class="time-shortcut-btn" data-hours="1">1 hr</button>
                 <button type="button" class="time-shortcut-btn" data-hours="3">3 hrs</button>
-                <button type="button" class="time-shortcut-btn" data-hours="6">6 hrs</button>
                 <button type="button" class="time-shortcut-btn" data-hours="9">9 hrs</button>
                 <button type="button" class="time-shortcut-btn" data-hours="12">12 hrs</button>
                 <button type="button" class="time-shortcut-btn" data-hours="18">18 hrs</button>
@@ -305,11 +382,14 @@
     </form>
 
     <div class="reminders-section">
-        <div class="reminders-header">
-            <span class="reminders-title">Scheduled Reminders</span>
+        <div class="reminders-header" id="remindersHeader">
+            <div class="reminders-title-row">
+                <span class="reminders-chevron" id="remindersChevron">▶</span>
+                <span class="reminders-title">Scheduled Reminders</span>
+            </div>
             <span class="reminders-count" id="remindersCount"></span>
         </div>
-        <div id="remindersContainer"><div class="empty-state">Loading…</div></div>
+        <div id="remindersContainer" style="display:none;"><div class="empty-state">Loading…</div></div>
     </div>
 </div>
 
@@ -322,6 +402,7 @@
     let editingId = null; // null = creating new, string = editing existing
 
     const noteField       = document.getElementById('note');
+    const titleSelect     = document.getElementById('titleSelect');
     const dateField       = document.getElementById('date');
     const timeField       = document.getElementById('time');
     const prioritySlider  = document.getElementById('priority');
@@ -329,20 +410,165 @@
     const recurringToggle = document.getElementById('recurringToggle');
     const recurringOptions = document.getElementById('recurringOptions');
     const toggleRow       = document.getElementById('toggleRow');
+    const manageTitlesBtn = document.getElementById('manageTitlesBtn');
+    const titleManager    = document.getElementById('titleManager');
+    const titleManagerList = document.getElementById('titleManagerList');
+    const newTitleInput   = document.getElementById('newTitleInput');
 
     prioritySlider.addEventListener('input', e => { priorityValue.textContent = e.target.value; });
+
+    // Curated subset of ntfy's supported emoji short-codes (docs.ntfy.sh/emojis)
+    const EMOJI_OPTIONS = [
+        ['inbox_tray','📥'], ['rotating_light','🚨'], ['link','🔗'], ['basket','🧺'],
+        ['shopping_cart','🛒'], ['moneybag','💰'], ['house','🏠'], ['briefcase','💼'],
+        ['calendar','📅'], ['alarm_clock','⏰'], ['bell','🔔'], ['pushpin','📌'],
+        ['memo','📝'], ['bulb','💡'], ['wrench','🔧'], ['package','📦'],
+        ['pill','💊'], ['stethoscope','🩺'], ['fork_and_knife','🍽️'], ['car','🚗'],
+        ['airplane','✈️'], ['birthday','🎂'], ['tada','🎉'], ['warning','⚠️'],
+        ['white_check_mark','✅'], ['books','📚'], ['receipt','🧾'], ['key','🔑'],
+    ];
+    const EMOJI_MAP = Object.fromEntries(EMOJI_OPTIONS);
+
+    let currentTitles = [];
+    let newTag = '';
+
+    async function loadTitles() {
+        try {
+            currentTitles = await fetch('/titles').then(r => r.json());
+        } catch {
+            currentTitles = [];
+        }
+        const prev = titleSelect.value;
+        const options = currentTitles.length ? currentTitles : [{ name: 'General', tag: '' }];
+        titleSelect.innerHTML = options.map(t => {
+            const glyph = EMOJI_MAP[t.tag] ? EMOJI_MAP[t.tag] + ' ' : '';
+            return `<option value="${escapeHtml(t.name)}">${glyph}${escapeHtml(t.name)}</option>`;
+        }).join('');
+        if (options.some(t => t.name === prev)) titleSelect.value = prev;
+        renderTitleManager();
+    }
+
+    function emojiPickerButtons(selectedTag) {
+        return `<button type="button" class="emoji-swatch${selectedTag ? '' : ' selected'}" data-code="" title="No emoji">✕</button>` +
+            EMOJI_OPTIONS.map(([code, glyph]) =>
+                `<button type="button" class="emoji-swatch${code === selectedTag ? ' selected' : ''}" data-code="${code}">${glyph}</button>`
+            ).join('');
+    }
+
+    function renderTitleManager() {
+        titleManagerList.innerHTML = currentTitles.map((t, i) => `
+            <div class="title-manager-row">
+                <span class="title-current-emoji">${EMOJI_MAP[t.tag] || '·'}</span>
+                <input type="text" value="${escapeHtml(t.name)}" data-idx="${i}">
+                <button type="button" onclick="toggleTitleEmojiPicker(${i})">🙂</button>
+                <button type="button" onclick="saveTitleEdit(${i})">Save</button>
+                <button type="button" class="title-delete-btn" onclick="deleteTitle(${i})">✕</button>
+            </div>
+            <div class="emoji-picker-wrap" id="emojiPickerWrap-${i}" style="display:none;">
+                <div class="emoji-picker" id="emojiPicker-${i}">${emojiPickerButtons(t.tag)}</div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('newEmojiPicker').innerHTML = emojiPickerButtons('');
+
+    function toggleTitleEmojiPicker(idx) {
+        const wrap = document.getElementById(`emojiPickerWrap-${idx}`);
+        wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Event delegation: handles clicks on any emoji swatch (add row + per-title rows)
+    titleManager.addEventListener('click', (e) => {
+        const swatch = e.target.closest('.emoji-swatch');
+        if (!swatch) return;
+        const picker = swatch.closest('.emoji-picker');
+        picker.querySelectorAll('.emoji-swatch').forEach(b => b.classList.remove('selected'));
+        swatch.classList.add('selected');
+        if (picker.id === 'newEmojiPicker') {
+            newTag = swatch.dataset.code;
+        } else {
+            picker.dataset.selectedTag = swatch.dataset.code;
+        }
+    });
+
+    manageTitlesBtn.addEventListener('click', () => {
+        titleManager.classList.toggle('visible');
+        manageTitlesBtn.classList.toggle('active');
+    });
+
+    document.getElementById('addTitleBtn').addEventListener('click', async () => {
+        const title = newTitleInput.value.trim();
+        if (!title) return;
+        try {
+            await fetch('/titles', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, tag: newTag })
+            });
+            newTitleInput.value = '';
+            newTag = '';
+            const newPicker = document.getElementById('newEmojiPicker');
+            newPicker.querySelectorAll('.emoji-swatch').forEach(b => b.classList.remove('selected'));
+            newPicker.querySelector('.emoji-swatch[data-code=""]').classList.add('selected');
+            await loadTitles();
+        } catch {
+            showNotification('✗ Could not add title.', true);
+        }
+    });
+
+    async function saveTitleEdit(idx) {
+        const input = titleManagerList.querySelector(`input[data-idx="${idx}"]`);
+        const title = input.value.trim();
+        if (!title) return;
+        const picker = document.getElementById(`emojiPicker-${idx}`);
+        const tag = picker.dataset.selectedTag !== undefined ? picker.dataset.selectedTag : (currentTitles[idx].tag || '');
+        try {
+            await fetch(`/titles/${idx}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, tag })
+            });
+            await loadTitles();
+        } catch {
+            showNotification('✗ Could not save title.', true);
+        }
+    }
+
+    async function deleteTitle(idx) {
+        if (!confirm('Delete this title?')) return;
+        try {
+            await fetch(`/titles/${idx}`, { method: 'DELETE' });
+            await loadTitles();
+        } catch {
+            showNotification('✗ Could not delete title.', true);
+        }
+    }
+    loadTitles();
 
     recurringToggle.addEventListener('change', function () {
         recurringOptions.classList.toggle('visible', this.checked);
         toggleRow.classList.toggle('active', this.checked);
     });
 
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function localDateStr(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+    function localTimeStr(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+    function setFieldsFromDate(d) {
+        dateField.value = localDateStr(d);
+        timeField.value = localTimeStr(d);
+    }
+    function currentFieldsDate() {
+        // Cumulative base: whatever is currently in the fields, falling back to now.
+        if (dateField.value && timeField.value) {
+            const d = new Date(`${dateField.value}T${timeField.value}`);
+            if (!isNaN(d)) return d;
+        }
+        return new Date();
+    }
+
     document.querySelectorAll('.time-shortcut-btn').forEach(btn => {
         btn.addEventListener('click', function () {
-            const d = new Date();
+            const d = currentFieldsDate();
             d.setHours(d.getHours() + parseInt(this.dataset.hours));
-            dateField.value = d.toISOString().split('T')[0];
-            timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+            setFieldsFromDate(d);
         });
     });
 
@@ -367,16 +593,14 @@
         document.getElementById('intervalType').value = 'days';
         const d = new Date();
         d.setMinutes(d.getMinutes() + 1);
-        dateField.value = d.toISOString().split('T')[0];
-        timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+        setFieldsFromDate(d);
     }
 
     // Default: 1 minute from now
     (() => {
         const d = new Date();
         d.setMinutes(d.getMinutes() + 1);
-        dateField.value = d.toISOString().split('T')[0];
-        timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+        setFieldsFromDate(d);
     })();
 
     function validateTime() {
@@ -384,8 +608,7 @@
         if (sel < new Date()) {
             const d = new Date();
             d.setMinutes(d.getMinutes() + 1);
-            dateField.value = d.toISOString().split('T')[0];
-            timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+            setFieldsFromDate(d);
         }
     }
 
@@ -397,14 +620,16 @@
         validateTime();
 
         const isRecurring = recurringToggle.checked;
+        const selectedTitle = currentTitles.find(t => t.name === titleSelect.value);
         const payload = {
+            title:          titleSelect.value,
+            tag:            selectedTitle ? (selectedTitle.tag || '') : '',
             message:        noteField.value,
             priority:       parseInt(prioritySlider.value),
             next_fire:      Math.floor(new Date(`${dateField.value}T${timeField.value}`).getTime() / 1000),
             recurring:      isRecurring,
             interval_type:  isRecurring ? document.getElementById('intervalType').value : null,
             interval_value: isRecurring ? parseInt(document.getElementById('intervalValue').value) : null,
-            tag:            'mailbox_with_mail',
         };
 
         const url    = editingId ? `${REMINDERS_URL}/${editingId}` : SCHEDULE_URL;
@@ -452,13 +677,13 @@
         editingId = r.id;
         document.querySelector('button[type="submit"] span:last-child').textContent = 'Update';
 
+        titleSelect.value = r.title || '';
         noteField.value = r.message;
         prioritySlider.value = r.priority;
         priorityValue.textContent = r.priority;
 
         const d = new Date(r.next_fire * 1000);
-        dateField.value = d.toISOString().split('T')[0];
-        timeField.value = d.toISOString().split('T')[1].slice(0, 5);
+        setFieldsFromDate(d);
 
         const isRecurring = !!r.recurring;
         recurringToggle.checked = isRecurring;
@@ -481,7 +706,7 @@
         const container = document.getElementById('remindersContainer');
         const countEl   = document.getElementById('remindersCount');
         try {
-            const reminders = await fetch(REMINDERS_URL).then(r => r.json());
+            const reminders = (await fetch(REMINDERS_URL).then(r => r.json())).filter(r => !r.fired);
             countEl.textContent = reminders.length ? `${reminders.length} pending` : '';
 
             if (!reminders.length) {
@@ -492,7 +717,7 @@
             container.innerHTML = reminders.map(r => `
                 <div class="reminder-item ${r.recurring ? 'recurring-item' : ''}">
                     <div class="reminder-info">
-                        <div class="reminder-message">${escapeHtml(r.message)}</div>
+                        <div class="reminder-message">${EMOJI_MAP[r.tag] ? EMOJI_MAP[r.tag] + ' ' : ''}${escapeHtml(r.message)}</div>
                         <div class="reminder-meta">
                             <span>🕐 ${formatDateTime(r.next_fire)}</span>
                             <span>⚡ P${r.priority}</span>
@@ -513,7 +738,57 @@
         }
     }
 
+    async function cloneForReschedule(r) {
+        // Recurring reminder: create a fresh one-off copy so the original
+        // recurring schedule is left untouched. User just picks a new time.
+        resetForm();
+        titleSelect.value = r.title || '';
+        noteField.value = r.message;
+        prioritySlider.value = r.priority;
+        priorityValue.textContent = r.priority;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showNotification('Rescheduling as a one-off — pick a new time and save.');
+    }
+
+    async function handleRescheduleParam() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('reschedule');
+        if (!id) return;
+
+        // Clean the URL so refreshing doesn't re-trigger this.
+        window.history.replaceState({}, '', window.location.pathname);
+
+        try {
+            const reminders = await fetch(REMINDERS_URL).then(r => r.json());
+            const r = reminders.find(x => x.id === id);
+            if (!r) {
+                showNotification('✗ That reminder no longer exists.', true);
+                return;
+            }
+            if (r.recurring) {
+                cloneForReschedule(r);
+            } else {
+                editReminder(r);
+                const d = new Date();
+                d.setMinutes(d.getMinutes() + 1);
+                setFieldsFromDate(d);
+                showNotification('Loaded — pick a new time and save.');
+            }
+        } catch {
+            showNotification('✗ Could not load reminder for reschedule.', true);
+        }
+    }
+
+    document.getElementById('remindersHeader').addEventListener('click', () => {
+        const container = document.getElementById('remindersContainer');
+        const chevron = document.getElementById('remindersChevron');
+        const open = container.style.display !== 'none';
+        container.style.display = open ? 'none' : '';
+        chevron.classList.toggle('open', !open);
+    });
+
     loadReminders();
+    handleRescheduleParam();
     setInterval(loadReminders, 30000);
 </script>
 </body>

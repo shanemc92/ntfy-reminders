@@ -13,12 +13,18 @@ import time
 import calendar
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
 
 # ── Configuration ────────────────────────────────────────────────────────────
-NTFY_BASE_URL = 'https://ntfy.sh'        # Change to your ntfy server URL
-TOPIC         = 'your_topic_here'        # Change to your ntfy topic
-NTFY_TITLE    = 'ntfy Scheduler'
-DATA_FILE     = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reminders.json')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+NTFY_BASE_URL   = os.environ.get('NTFY_BASE_URL', 'https://ntfy.sh')
+TOPIC           = os.environ['NTFY_TOPIC']       # required — no fallback
+NTFY_TITLE      = 'ntfy Scheduler'                # fallback if reminder has no title
+SCHEDULER_URL   = os.environ.get('NTFY_SCHEDULER_URL', '').rstrip('/')
+ICON_URL        = os.environ.get('NTFY_ICON_URL', '').strip()
+DATA_FILE       = os.path.join(BASE_DIR, 'reminders.json')
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -46,13 +52,24 @@ def advance_time(ts: int, interval_type: str, interval_value: int) -> int:
     return new_ts
 
 
+def ascii_safe(s: str) -> str:
+    """HTTP headers must be Latin-1; strip anything outside that range (e.g. emoji)
+    so a title with non-Latin characters can't silently break the request."""
+    return s.encode('latin-1', errors='ignore').decode('latin-1').strip()
+
+
 def send_notification(reminder: dict) -> bool:
     url = f"{NTFY_BASE_URL}/{TOPIC}"
     headers = {
-        'Title':    NTFY_TITLE,
+        'Title':    ascii_safe(reminder.get('title') or NTFY_TITLE) or NTFY_TITLE,
         'Priority': str(reminder.get('priority', 3)),
-        'Tags':     reminder.get('tag', 'mailbox_with_mail'),
     }
+    if reminder.get('tag'):
+        headers['Tags'] = reminder['tag']
+    if ICON_URL:
+        headers['Icon'] = ICON_URL
+    if SCHEDULER_URL:
+        headers['Actions'] = f"view, Reschedule, {SCHEDULER_URL}/?reschedule={reminder['id']}"
     try:
         resp = requests.post(url, data=reminder['message'].encode('utf-8'),
                              headers=headers, timeout=10)
@@ -61,6 +78,9 @@ def send_notification(reminder: dict) -> bool:
     except Exception as e:
         print(f"[ERROR] Failed to send reminder {reminder['id']}: {e}")
         return False
+
+
+RESCHEDULE_GRACE_SECONDS = 24 * 3600  # how long a fired one-time reminder stays reschedulable
 
 
 def main():
@@ -74,6 +94,13 @@ def main():
     kept = []
 
     for r in reminders:
+        if r.get('fired') and not r.get('recurring'):
+            # Already fired, one-time — keep briefly so the Reschedule
+            # action button still resolves, but never re-fire it.
+            if now - r.get('fired_at', 0) < RESCHEDULE_GRACE_SECONDS:
+                kept.append(r)
+            continue
+
         if r['next_fire'] > now:
             kept.append(r)
             continue
@@ -91,7 +118,11 @@ def main():
                 next_ts = advance_time(next_ts, r['interval_type'], r['interval_value'])
             r['next_fire'] = next_ts
             kept.append(r)
-        # else: one-time reminder, discard
+        else:
+            # One-time reminder: keep briefly (see above) instead of discarding
+            r['fired'] = True
+            r['fired_at'] = now
+            kept.append(r)
 
     with open(DATA_FILE, 'w') as f:
         json.dump(kept, f, indent=2)
