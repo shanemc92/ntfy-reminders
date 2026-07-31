@@ -9,18 +9,19 @@ A self-hosted notification scheduler for [ntfy](https://ntfy.sh) with support fo
 
 ```
 ntfy-scheduler/
-├── ntfy_server.py           Flask server — serves the UI and exposes the REST API
-├── ntfy_dispatch.py         Cron script — fires due reminders, reschedules recurring ones
+├── ntfy_server.py             Flask server — serves the UI and exposes the REST API
+├── ntfy_dispatch.py           Cron script — fires due reminders, reschedules recurring ones
 ├── static/
-│   └── ntfy.html            Web UI — schedule, edit, and delete reminders; manage titles + emoji
+│   └── ntfy.html              Web UI — schedule, edit, and delete reminders; manage titles + emoji
 ├── standalone/
-│   └── ntfy-client-only.html  No server needed — open directly in a browser; no recurring reminders
-├── data/                    Auto-created at runtime, gitignored
-│   ├── reminders.json       All pending (and recently-fired) reminders
-│   └── titles.json          Your list of titles and their linked emoji
+│   ├── ntfy-client-only.html  No server needed — open directly in a browser; no recurring reminders
+│   └── ntfy-client-demo.html  Demo version that allows ntfy.sh topic to be entered on screen. 
+├── data/                      Auto-created at runtime, gitignored
+│   ├── reminders.json         All pending (and recently-fired) reminders
+│   └── titles.json            Your list of titles and their linked emoji
 ├── docs/
 │   └── screenshot.png
-├── .env                     Your config — topic, base URL, and optional extras (see below)
+├── .env                       Your config — topic, base URL, and optional extras (see below)
 ├── .env.example
 └── requirements.txt
 ```
