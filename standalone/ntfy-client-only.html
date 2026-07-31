@@ -201,12 +201,15 @@
         .time-shortcuts {
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
             gap: 8px;
             margin-top: 12px;
         }
 
         .time-shortcut-btn {
-            padding: 8px 16px;
+            width: 68px;
+            flex-shrink: 0;
+            padding: 8px 4px;
             background: #3a3d4e;
             border: 1px solid #464956;
             border-radius: 6px;
@@ -380,6 +383,11 @@
             .button-group {
                 grid-template-columns: 1fr;
             }
+
+            .time-shortcut-btn {
+                width: 58px;
+                padding: 8px 2px;
+            }
         }
     </style>
 </head>
@@ -387,12 +395,26 @@
     <div class="container">
         <div class="header">
             <h1>📬 ntfy Scheduler</h1>
+            <!-- <p>Schedule notifications with ease</p> -->
         </div>
 
         <form id="ntfyForm">
             <div class="form-group">
                 <label class="form-label" for="note">Message</label>
                 <textarea id="note" placeholder="Enter your notification message" required></textarea>
+                <!-- Emoji row commented out
+                <div class="emoji-row" id="emojiRow">
+                    <span class="emoji">👀</span>
+                    <span class="emoji">🚨</span>
+                    <span class="emoji">🔥</span>
+                    <span class="emoji">⚠️</span>
+                    <span class="emoji">🎉</span>
+                    <span class="emoji">📢</span>
+                    <span class="emoji">🔔</span>
+                    <span class="emoji">📱</span>
+                    <span class="emoji">⬇️</span>
+                </div>
+                -->
             </div>
 
             <div class="form-group">
@@ -420,13 +442,14 @@
             <div class="form-group">
                 <label class="form-label">Quick Time Shortcuts</label>
                 <div class="time-shortcuts">
-                    <button type="button" class="time-shortcut-btn" data-hours="3">3 hrs</button>
-                    <button type="button" class="time-shortcut-btn" data-hours="6">6 hrs</button>
-                    <button type="button" class="time-shortcut-btn" data-hours="9">9 hrs</button>
-                    <button type="button" class="time-shortcut-btn" data-hours="12">12 hrs</button>
-                    <button type="button" class="time-shortcut-btn" data-hours="18">18 hrs</button>
-                    <button type="button" class="time-shortcut-btn" data-hours="24">24 hrs</button>
-                    <button type="button" class="time-shortcut-btn" data-hours="36">36 hrs</button>
+                    <button type="button" class="time-shortcut-btn" id="nowShortcutBtn">Now</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="15">+15m</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="30">+30m</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="60">+1h</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="180">+3h</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="360">+6h</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="720">+12h</button>
+                    <button type="button" class="time-shortcut-btn" data-minutes="1440">+24h</button>
                 </div>
             </div>
 
@@ -463,15 +486,33 @@
             priorityValue.textContent = e.target.value;
         });
 
+        // Local wall-clock date/time helpers (avoid toISOString, which is always UTC)
+        function pad2(n) { return String(n).padStart(2, '0'); }
+        function localDateStr(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+        function localTimeStr(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+        function setFieldsFromDate(d) {
+            dateField.value = localDateStr(d);
+            timeField.value = localTimeStr(d);
+        }
+        function currentFieldsDate() {
+            // Cumulative base: whatever is currently in the fields, falling back to now.
+            if (dateField.value && timeField.value) {
+                const d = new Date(`${dateField.value}T${timeField.value}`);
+                if (!isNaN(d)) return d;
+            }
+            return new Date();
+        }
+
         // Time shortcut buttons
-        document.querySelectorAll('.time-shortcut-btn').forEach(button => {
+        document.getElementById('nowShortcutBtn').addEventListener('click', () => {
+            setFieldsFromDate(new Date());
+        });
+
+        document.querySelectorAll('.time-shortcut-btn[data-minutes]').forEach(button => {
             button.addEventListener('click', function() {
-                const hours = parseInt(this.getAttribute('data-hours'));
-                const futureTime = new Date();
-                futureTime.setHours(futureTime.getHours() + hours);
-                
-                dateField.value = futureTime.toISOString().split('T')[0];
-                timeField.value = futureTime.toISOString().split('T')[1].slice(0, 5);
+                const d = currentFieldsDate();
+                d.setMinutes(d.getMinutes() + parseInt(this.getAttribute('data-minutes')));
+                setFieldsFromDate(d);
             });
         });
 
@@ -504,15 +545,13 @@
             // Reset date and time to one minute from now
             const now = new Date();
             now.setMinutes(now.getMinutes() + 1);
-            dateField.value = now.toISOString().split('T')[0];
-            timeField.value = now.toISOString().split('T')[1].slice(0, 5);
+            setFieldsFromDate(now);
         }
 
         // Set default date and time to one minute from now
         const now = new Date();
         now.setMinutes(now.getMinutes() + 1);
-        dateField.value = now.toISOString().split('T')[0];
-        timeField.value = now.toISOString().split('T')[1].slice(0, 5);
+        setFieldsFromDate(now);
 
         // Function to check and update time if in the past
         function validateAndUpdateTime() {
@@ -527,14 +566,12 @@
             if (selectedDateTime < now) {
                 // Set to current time plus 1 minute
                 now.setMinutes(now.getMinutes() + 1);
-                document.getElementById('date').value = now.toISOString().split('T')[0];
-                document.getElementById('time').value = now.toISOString().split('T')[1].slice(0, 5);
+                setFieldsFromDate(now);
                 return true; // Time was updated
             };
             if (selectedDateTime > max) {
                 // Set to max of 3 days
-                document.getElementById('date').value = max.toISOString().split('T')[0];
-                document.getElementById('time').value = max.toISOString().split('T')[1].slice(0, 5);
+                setFieldsFromDate(max);
                 return true; // Time was updated
             };
             return false; // Time was valid

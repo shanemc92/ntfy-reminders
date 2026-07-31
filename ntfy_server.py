@@ -17,10 +17,14 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-DATA_FILE   = os.path.join(BASE_DIR, 'reminders.json')
-TITLES_FILE = os.path.join(BASE_DIR, 'titles.json')
+STATIC_DIR  = os.path.join(BASE_DIR, 'static')
+DATA_DIR    = os.path.join(BASE_DIR, 'data')
+DATA_FILE   = os.path.join(DATA_DIR, 'reminders.json')
+TITLES_FILE = os.path.join(DATA_DIR, 'titles.json')
 HTML_FILE   = 'ntfy.html'
 ICON_URL    = os.environ.get('NTFY_ICON_URL', '').strip()
+
+os.makedirs(DATA_DIR, exist_ok=True)
 
 
 def load_reminders():
@@ -69,7 +73,7 @@ def parse_int(value, default=None, lo=None, hi=None):
 
 @app.route('/')
 def index():
-    return send_from_directory(BASE_DIR, HTML_FILE)
+    return send_from_directory(STATIC_DIR, HTML_FILE)
 
 
 @app.route('/titles', methods=['GET'])

@@ -24,7 +24,7 @@ TOPIC           = os.environ['NTFY_TOPIC']       # required — no fallback
 NTFY_TITLE      = 'ntfy Scheduler'                # fallback if reminder has no title
 SCHEDULER_URL   = os.environ.get('NTFY_SCHEDULER_URL', '').rstrip('/')
 ICON_URL        = os.environ.get('NTFY_ICON_URL', '').strip()
-DATA_FILE       = os.path.join(BASE_DIR, 'reminders.json')
+DATA_FILE       = os.path.join(BASE_DIR, 'data', 'reminders.json')
 # ─────────────────────────────────────────────────────────────────────────────
 
 

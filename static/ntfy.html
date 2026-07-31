@@ -114,10 +114,12 @@
 
         .date-time-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-        .time-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .time-shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
 
         .time-shortcut-btn {
-            padding: 8px 16px;
+            width: 68px;
+            flex-shrink: 0;
+            padding: 8px 4px;
             background: #3a3d4e;
             border: 1px solid #464956;
             border-radius: 6px;
@@ -286,6 +288,7 @@
             .interval-row { grid-template-columns: 80px 1fr; }
             .emoji-swatch { width: 30px; height: 30px; font-size: 14px; }
             .title-manage-btn { width: 44px; }
+            .time-shortcut-btn { width: 58px; padding: 8px 2px; }
         }
     </style>
 </head>
@@ -342,13 +345,14 @@
         <div class="form-group">
             <label class="form-label">Quick Time Shortcuts</label>
             <div class="time-shortcuts">
-                <button type="button" class="time-shortcut-btn" data-hours="1">1 hr</button>
-                <button type="button" class="time-shortcut-btn" data-hours="3">3 hrs</button>
-                <button type="button" class="time-shortcut-btn" data-hours="9">9 hrs</button>
-                <button type="button" class="time-shortcut-btn" data-hours="12">12 hrs</button>
-                <button type="button" class="time-shortcut-btn" data-hours="18">18 hrs</button>
-                <button type="button" class="time-shortcut-btn" data-hours="24">24 hrs</button>
-                <button type="button" class="time-shortcut-btn" data-hours="36">36 hrs</button>
+                <button type="button" class="time-shortcut-btn" id="nowShortcutBtn">Now</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="15">+15m</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="30">+30m</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="60">+1h</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="180">+3h</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="360">+6h</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="720">+12h</button>
+                <button type="button" class="time-shortcut-btn" data-minutes="1440">+24h</button>
             </div>
         </div>
 
@@ -564,10 +568,14 @@
         return new Date();
     }
 
-    document.querySelectorAll('.time-shortcut-btn').forEach(btn => {
+    document.getElementById('nowShortcutBtn').addEventListener('click', () => {
+        setFieldsFromDate(new Date());
+    });
+
+    document.querySelectorAll('.time-shortcut-btn[data-minutes]').forEach(btn => {
         btn.addEventListener('click', function () {
             const d = currentFieldsDate();
-            d.setHours(d.getHours() + parseInt(this.dataset.hours));
+            d.setMinutes(d.getMinutes() + parseInt(this.dataset.minutes));
             setFieldsFromDate(d);
         });
     });
