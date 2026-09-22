@@ -62,6 +62,9 @@ NTFY_TOPIC=your_topic_here
 # titles (add/rename/delete, and link an emoji to each) from the app itself.
 NTFY_TITLES=To Do,Web Link,Housework
 
+# Address the server binds to. Defaults to 127.0.0.1 (loopback only).
+BIND_HOST=127.0.0.1
+
 # LAN address of this app, used to build the notification's "Reschedule" action button.
 # Leave blank to disable that button.
 NTFY_SCHEDULER_URL=http://your-server:5000
@@ -72,10 +75,34 @@ NTFY_ICON_URL=http://your-server:5000/static/icon.png
 
 `.env` is gitignored — never commit it. Since the topic is your only access control on the public `ntfy.sh` relay, use a long, hard-to-guess one (or self-host ntfy).
 
-To restrict the server to localhost only, edit the bottom of `ntfy_server.py`:
-```python
-app.run(host='127.0.0.1', port=5000)
+### Binding
+
+The server binds to `127.0.0.1` by default, so out of the box it is only
+reachable from the machine it runs on. Set `BIND_HOST` in `.env` to widen that:
+
+```dotenv
+BIND_HOST=0.0.0.0
 ```
+
+Only do that once a firewall rule limits port 5000 to your reverse proxy. The
+app has no login of its own, so anything that can reach the port can read and
+change your reminders.
+
+## Security notes
+
+- **There is no app-level login.** Authentication is the reverse proxy's job
+  (forward auth, a VPN, whatever you put in front of it). Keep `BIND_HOST` on
+  loopback unless a firewall rule restricts the port to that proxy.
+- **No CSRF tokens, and none are needed.** Every state-changing route
+  (`POST /titles`, `PUT /titles/<idx>`, `DELETE /titles/<idx>`,
+  `POST /schedule`, `PUT /reminders/<id>`, `DELETE /reminders/<id>`) reads its
+  body with `request.get_json()` and never passes `force=True`, so Flask
+  rejects anything that does not arrive as `application/json`. An HTML form on
+  another site cannot send that content type, and a cross-origin `fetch` that
+  does has to pass a CORS preflight first, which this server never answers.
+  No route accepts form-encoded data. If one ever does, it will need a token.
+- **The ntfy topic is your only access control on the public relay.** Use a
+  long, hard-to-guess topic name, or self-host ntfy.
 
 ## Running the Server
 

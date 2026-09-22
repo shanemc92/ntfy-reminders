@@ -185,6 +185,9 @@ def delete_reminder(reminder_id):
 
 
 if __name__ == '__main__':
-    print(f"Starting ntfy Scheduler on http://localhost:5000")
+    # Loopback by default. Only widen this to a LAN address once a firewall rule
+    # limits port 5000 to the reverse proxy - the app has no login of its own.
+    bind_host = os.environ.get('BIND_HOST', '127.0.0.1')
+    print(f"Starting ntfy Scheduler on http://{bind_host}:5000")
     print(f"Reminders stored in: {DATA_FILE}")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host=bind_host, port=5000, debug=False)
