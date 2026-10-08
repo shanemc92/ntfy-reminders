@@ -11,6 +11,7 @@ A self-hosted notification scheduler for [ntfy](https://ntfy.sh) with support fo
 ntfy-scheduler/
 ├── ntfy_server.py             Flask server — serves the UI and exposes the REST API
 ├── ntfy_dispatch.py           Cron script — fires due reminders, reschedules recurring ones
+├── ntfy_schedule.py           Schedule maths shared by both — stepping a repeat forward, the weekday filter
 ├── static/
 │   └── ntfy.html              Web UI — schedule, edit, and delete reminders; manage titles + emoji
 ├── standalone/
@@ -21,6 +22,7 @@ ntfy-scheduler/
 │   └── titles.json            Your list of titles and their linked emoji
 ├── docs/
 │   └── screenshot.png
+├── tests/                     Unit tests — python -m unittest discover -s tests
 ├── .env                       Your config — topic, base URL, and optional extras (see below)
 ├── .env.example
 └── requirements.txt
@@ -152,6 +154,13 @@ sudo systemctl start ntfy-scheduler
 
 - Schedule one-time reminders at a specific date and time
 - Schedule recurring reminders (every N hours / days / weeks / months)
+- Limit hourly and daily repeats to chosen days with an M T W T F S S row of toggle buttons —
+  e.g. a daily reminder on workdays only, or weekends only. Excluded days are skipped without
+  shifting the schedule, and a first fire that lands on an excluded day moves to the next allowed
+  one. Weekdays are read in the timezone of the browser that saved the reminder, so a server in UTC
+  doesn't put a late-night or early-morning reminder on the wrong day (this needs Python 3.9+;
+  on 3.8 the server's timezone is used instead). Weekly and monthly repeats don't have the buttons:
+  they already land on one fixed day
 - Titles are managed in-app (add, rename, delete) and each can have an emoji linked to it,
   picked from a curated set based on [ntfy's supported emoji](https://docs.ntfy.sh/emojis/) —
   sent as the notification's `Tags` header rather than embedded in the title, since ntfy's

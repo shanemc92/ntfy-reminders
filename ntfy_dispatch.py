@@ -10,10 +10,11 @@ Cron setup (edit with `crontab -e`):
 import json
 import os
 import time
-import calendar
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
+
+from ntfy_schedule import advance_time, zone
 
 # ── Configuration ────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,30 +27,6 @@ SCHEDULER_URL   = os.environ.get('NTFY_SCHEDULER_URL', '').rstrip('/')
 ICON_URL        = os.environ.get('NTFY_ICON_URL', '').strip()
 DATA_FILE       = os.path.join(BASE_DIR, 'data', 'reminders.json')
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def advance_time(ts: int, interval_type: str, interval_value: int) -> int:
-    """Return the next fire Unix timestamp after advancing by the given interval."""
-    dt = datetime.fromtimestamp(ts)
-
-    if interval_type == 'hours':
-        new_ts = ts + interval_value * 3600
-    elif interval_type == 'days':
-        new_ts = ts + interval_value * 86400
-    elif interval_type == 'weeks':
-        new_ts = ts + interval_value * 7 * 86400
-    elif interval_type == 'months':
-        month = dt.month - 1 + interval_value
-        year  = dt.year + month // 12
-        month = month % 12 + 1
-        day   = min(dt.day, calendar.monthrange(year, month)[1])
-        new_dt = dt.replace(year=year, month=month, day=day)
-        new_ts = int(new_dt.timestamp())
-    else:
-        # Fallback: 24 hours
-        new_ts = ts + 86400
-
-    return new_ts
 
 
 def ascii_safe(s: str) -> str:
@@ -112,10 +89,12 @@ def main():
         print(f"[{status.upper()}] [{ts}] {r['message'][:60]}")
 
         if r.get('recurring') and r.get('interval_type') and r.get('interval_value'):
-            # Advance to next occurrence (skip any that are also in the past)
-            next_ts = advance_time(r['next_fire'], r['interval_type'], r['interval_value'])
+            # Advance to next occurrence (skip any that are also in the past, or
+            # that land on a weekday the reminder is switched off for)
+            step = (r['interval_type'], r['interval_value'], r.get('days'), zone(r.get('tz')))
+            next_ts = advance_time(r['next_fire'], *step)
             while next_ts <= now:
-                next_ts = advance_time(next_ts, r['interval_type'], r['interval_value'])
+                next_ts = advance_time(next_ts, *step)
             r['next_fire'] = next_ts
             kept.append(r)
         else:

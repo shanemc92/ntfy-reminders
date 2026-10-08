@@ -12,6 +12,8 @@ import uuid
 from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 
+from ntfy_schedule import first_allowed, zone
+
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -69,6 +71,41 @@ def parse_int(value, default=None, lo=None, hi=None):
     if hi is not None:
         n = min(hi, n)
     return n
+
+
+def apply_days(r, data):
+    """Set the weekday filter (r['days'], r['tz']) on reminder `r` from the
+    request body, and move r['next_fire'] onto an allowed day. Returns an
+    error message, or None.
+
+    days is a sorted list of 0 (Mon) .. 6 (Sun), or None for every day, which
+    is also what all seven collapse to. Only hourly/daily repeats take one:
+    weekly and monthly repeats already land on a single fixed day. When
+    editing, `r` still holds the stored filter, which is kept if `data`
+    doesn't mention one; an explicit null clears it.
+
+    tz is the browser's IANA zone, because "which weekday is it" is the user's
+    answer rather than the server's. Unknown zones are dropped (-> server time).
+    A first fire on an excluded day moves to the next allowed one.
+    """
+    days = tz = None
+    if r['recurring'] and r['interval_type'] in ('hours', 'days') and r['interval_value']:
+        days = data.get('days', r.get('days'))
+        if days is not None:
+            if not (isinstance(days, list) and days and all(type(d) is int and 0 <= d <= 6 for d in days)):
+                return 'days must be a list of weekdays, 0 (Mon) to 6 (Sun)'
+            days = sorted(set(days))
+            if len(days) == 7:
+                days = None
+    if days:
+        tz = data.get('tz', r.get('tz'))
+        tz = tz if isinstance(tz, str) and zone(tz) else None
+        first = first_allowed(r['next_fire'], r['interval_type'], r['interval_value'], days, zone(tz))
+        if first is None:
+            return 'That repeat interval never lands on the selected days'
+        r['next_fire'] = first
+    r['days'], r['tz'] = days, tz
+    return None
 
 
 @app.route('/')
@@ -141,10 +178,13 @@ def schedule():
         'interval_value': parse_int(data.get('interval_value'), lo=1),
         'created': int(time.time()),
     }
+    err = apply_days(reminder, data)
+    if err:
+        return jsonify({'error': err}), 400
     reminders = load_reminders()
     reminders.append(reminder)
     save_reminders(reminders)
-    return jsonify({'status': 'ok', 'id': reminder['id']}), 201
+    return jsonify({'status': 'ok', 'id': reminder['id'], 'next_fire': reminder['next_fire']}), 201
 
 
 @app.route('/reminders', methods=['GET'])
@@ -172,8 +212,11 @@ def update_reminder(reminder_id):
             r['title']          = data.get('title', r.get('title', ''))
             r['tag']            = data.get('tag', r.get('tag', ''))
             r['fired']          = False
+            err = apply_days(r, data)
+            if err:
+                return jsonify({'error': err}), 400
             save_reminders(reminders)
-            return jsonify({'status': 'ok'})
+            return jsonify({'status': 'ok', 'next_fire': r['next_fire']})
     return jsonify({'error': 'Not found'}), 404
 
 

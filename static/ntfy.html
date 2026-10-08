@@ -171,6 +171,17 @@
 
         .interval-row { display: grid; grid-template-columns: 90px 1fr; gap: 12px; }
 
+        /* Weekday picker (M T W T F S S) */
+        .day-row { display: flex; gap: 6px; }
+        .day-row .day-btn {
+            flex: 1; min-width: 0; padding: 10px 0;
+            font-size: 13px;
+            background: transparent; border: 1px solid #3a3d4e; color: #7d8190;
+        }
+        .day-row .day-btn:hover { background: #262a3a; border-color: #5b9bd5; color: #b8bcc8; }
+        .day-row .day-btn.on { background: rgba(91,155,213,.15); border-color: #5b9bd5; color: #e4e6eb; }
+        .day-row .day-btn.on:hover { background: rgba(91,155,213,.25); color: #fff; }
+
         /* Buttons */
         .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
 
@@ -376,6 +387,18 @@
                         <option value="months">Months</option>
                     </select>
                 </div>
+                <div id="daysGroup" style="margin-top:16px;">
+                    <label class="form-label" style="margin-bottom:10px;">On these days</label>
+                    <div class="day-row" id="dayRow">
+                        <button type="button" class="day-btn on" data-day="0" title="Monday" aria-pressed="true">M</button>
+                        <button type="button" class="day-btn on" data-day="1" title="Tuesday" aria-pressed="true">T</button>
+                        <button type="button" class="day-btn on" data-day="2" title="Wednesday" aria-pressed="true">W</button>
+                        <button type="button" class="day-btn on" data-day="3" title="Thursday" aria-pressed="true">T</button>
+                        <button type="button" class="day-btn on" data-day="4" title="Friday" aria-pressed="true">F</button>
+                        <button type="button" class="day-btn on" data-day="5" title="Saturday" aria-pressed="true">S</button>
+                        <button type="button" class="day-btn on" data-day="6" title="Sunday" aria-pressed="true">S</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -552,6 +575,37 @@
         toggleRow.classList.toggle('active', this.checked);
     });
 
+    // ── Weekday picker ────────────────────────────────────────────────────
+    // Days are 0=Mon .. 6=Sun (matches the server); null/empty = every day.
+    // Only hourly/daily repeats take one — weekly/monthly already land on a
+    // single fixed day — so the row is hidden for those.
+    const DAY_NAMES   = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayButtons  = document.querySelectorAll('#dayRow .day-btn');
+    const daysGroup   = document.getElementById('daysGroup');
+    const intervalType = document.getElementById('intervalType');
+
+    function setDays(days) {
+        const on = days && days.length ? days : [0, 1, 2, 3, 4, 5, 6];
+        dayButtons.forEach(b => {
+            const isOn = on.includes(parseInt(b.dataset.day));
+            b.classList.toggle('on', isOn);
+            b.setAttribute('aria-pressed', isOn);
+        });
+    }
+    function pickedDays() {
+        return [...dayButtons].filter(b => b.classList.contains('on')).map(b => parseInt(b.dataset.day));
+    }
+    function daysApply() { return ['hours', 'days'].includes(intervalType.value); }
+    function syncDays() { daysGroup.style.display = daysApply() ? '' : 'none'; }
+
+    dayButtons.forEach(b => b.addEventListener('click', () => {
+        const on = !b.classList.contains('on');
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on);
+    }));
+    intervalType.addEventListener('change', syncDays);
+    syncDays();
+
     function pad2(n) { return String(n).padStart(2, '0'); }
     function localDateStr(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
     function localTimeStr(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
@@ -599,6 +653,8 @@
         toggleRow.classList.remove('active');
         document.getElementById('intervalValue').value = 1;
         document.getElementById('intervalType').value = 'days';
+        setDays(null);
+        syncDays();
         const d = new Date();
         d.setMinutes(d.getMinutes() + 1);
         setFieldsFromDate(d);
@@ -628,6 +684,15 @@
         validateTime();
 
         const isRecurring = recurringToggle.checked;
+        const picked = pickedDays();
+        const filtered = isRecurring && daysApply();
+        if (filtered && !picked.length) {
+            showNotification('✗ Pick at least one day.', true);
+            return;
+        }
+        // All seven picked = no filter. The browser's timezone rides along because
+        // "which weekday is it" is the user's answer, not the server's.
+        const useDays = filtered && picked.length < 7;
         const selectedTitle = currentTitles.find(t => t.name === titleSelect.value);
         const payload = {
             title:          titleSelect.value,
@@ -638,6 +703,8 @@
             recurring:      isRecurring,
             interval_type:  isRecurring ? document.getElementById('intervalType').value : null,
             interval_value: isRecurring ? parseInt(document.getElementById('intervalValue').value) : null,
+            days:           useDays ? picked : null,
+            tz:             useDays ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
         };
 
         const url    = editingId ? `${REMINDERS_URL}/${editingId}` : SCHEDULE_URL;
@@ -649,12 +716,16 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            const result = await resp.json().catch(() => ({}));
             if (resp.ok) {
-                showNotification(editingId ? '✓ Reminder updated!' : '✓ Reminder scheduled!');
+                // The server moves a first fire that lands on an unticked day; say so.
+                const moved = result.next_fire && result.next_fire !== payload.next_fire
+                    ? ` First fire: ${formatDateTime(result.next_fire)}.` : '';
+                showNotification((editingId ? '✓ Reminder updated!' : '✓ Reminder scheduled!') + moved);
                 resetForm();
                 loadReminders();
             } else {
-                showNotification('✗ Failed.', true);
+                showNotification('✗ ' + (result.error || 'Failed.'), true);
             }
         } catch (err) {
             showNotification('✗ Error: ' + err.message, true);
@@ -675,6 +746,15 @@
         const map = { hours: 'hr', days: 'day', weeks: 'wk', months: 'mo' };
         const unit = (map[type] || type) + (value > 1 ? 's' : '');
         return `every ${value} ${unit}`;
+    }
+
+    function formatDays(days) {
+        if (!days || !days.length) return '';
+        const key = days.join();
+        const label = key === '0,1,2,3,4' ? 'weekdays'
+                    : key === '5,6'       ? 'weekends'
+                    : days.map(d => DAY_NAMES[d] || '').join(', ');
+        return ' · ' + label;
     }
 
     function escapeHtml(s) {
@@ -701,6 +781,8 @@
             document.getElementById('intervalValue').value = r.interval_value || 1;
             document.getElementById('intervalType').value  = r.interval_type  || 'days';
         }
+        setDays(r.days);
+        syncDays();
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -730,7 +812,7 @@
                             <span>🕐 ${formatDateTime(r.next_fire)}</span>
                             <span>⚡ P${r.priority}</span>
                             <span class="badge ${r.recurring ? 'badge-recurring' : 'badge-once'}">
-                                ${r.recurring ? '🔁 ' + formatInterval(r.interval_type, r.interval_value) : '1× once'}
+                                ${r.recurring ? '🔁 ' + formatInterval(r.interval_type, r.interval_value) + formatDays(r.days) : '1× once'}
                             </span>
                         </div>
                     </div>
