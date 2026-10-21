@@ -12,6 +12,7 @@ ntfy-reminders/
 ├── ntfy_server.py             Flask server — serves the UI and exposes the REST API
 ├── ntfy_dispatch.py           Cron script — fires due reminders, reschedules recurring ones
 ├── ntfy_schedule.py           Schedule maths shared by both — stepping a repeat forward, the weekday filter
+├── ntfy_store.py              File lock and atomic write shared by both — keeps reminders.json intact
 ├── static/
 │   └── ntfy.html              Web UI — schedule, edit, and delete reminders; manage titles + emoji
 ├── standalone/
@@ -201,8 +202,9 @@ docker run -d --name ntfy-reminders --restart unless-stopped \
 - **Timezone**: set `TZ` (for example `TZ=Europe/London` in `.env`). It defaults to UTC, which is what
   monthly repeats and the weekday filter's fallback use. Weekday filters saved from the browser carry
   their own zone and are not affected.
-- **One web worker, on purpose.** Reminders are a JSON file read, changed and rewritten with no locking, so
-  the server handles one request at a time rather than letting two saves overwrite each other.
+- **One web worker.** That is plenty for a personal list. Saves are safe either way: the server and the
+  dispatcher lock the data files around each change and replace them atomically, so editing a reminder
+  while a dispatch run is sending, or stopping the container mid-run, cannot lose or corrupt reminders.
 - **Maintainers:** the `docker` workflow builds and smoke-tests the image on every push and pull request,
   and publishes from `main` and from `v*.*.*` tags. After the first publish, check the package is set to
   public under the repository's *Packages* settings if you want unauthenticated pulls.
@@ -233,4 +235,9 @@ docker run -d --name ntfy-reminders --restart unless-stopped \
 - Priority slider (1–5)
 - Collapsible "Scheduled Reminders" list (collapsed by default)
 - Reminders persist across server restarts — ntfy never holds the schedule
+- A reminder that can't be sent (ntfy unreachable, a network blip) stays due and is retried every
+  minute for up to 6 hours, rather than being dropped; a recurring one keeps its slot. After that it
+  gives up and moves on to its next occurrence. Retries show as `[FAILED]` lines in the log
+- Editing, adding or deleting reminders while the dispatcher is mid-run is safe: each side takes a
+  file lock (`reminders.json.lock`) and writes atomically, so neither overwrites the other
 

@@ -28,9 +28,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 # docker-entrypoint.sh starts the dispatcher loop (the cron job from the README)
 # in the background, then execs the command below.
 #
-# -w 1 on purpose: reminders live in a JSON file that is read, modified and
-# rewritten with no locking, and one sync worker handles one request at a time.
-# More workers (or threads) would let two saves overwrite each other.
+# -w 1: one sync worker is plenty for a personal reminder list behind a JSON
+# file. Saves are file-locked (ntfy_store.py), so this is not what keeps them
+# from overwriting each other - more workers would be safe, just pointless.
 # --no-control-socket: gunicorn >= 25.1 otherwise writes a control socket under
 # $HOME, which nothing here uses and which can fail on constrained storage.
 ENTRYPOINT ["./docker-entrypoint.sh"]

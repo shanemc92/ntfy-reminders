@@ -5,3 +5,4 @@ __pycache__/
 reminders.json
 titles.json
 *.log
+data/

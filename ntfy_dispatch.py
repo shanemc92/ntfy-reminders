@@ -2,6 +2,8 @@
 """
 ntfy Dispatcher — run every minute via cron.
 Fires due reminders, reschedules recurring ones, removes one-time ones.
+A reminder that fails to send stays due and is retried every run (see
+RETRY_WINDOW_SECONDS), so an ntfy outage doesn't swallow it.
 
 Cron setup (edit with `crontab -e`):
   * * * * * /usr/bin/python3 /path/to/ntfy_dispatch.py >> /path/to/ntfy_dispatch.log 2>&1
@@ -15,6 +17,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from ntfy_schedule import advance_time, zone
+from ntfy_store import locked, write_json
 
 # ── Configuration ────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,53 +61,88 @@ def send_notification(reminder: dict) -> bool:
 
 
 RESCHEDULE_GRACE_SECONDS = 24 * 3600  # how long a fired one-time reminder stays reschedulable
+RETRY_WINDOW_SECONDS = 6 * 3600       # how long a reminder that fails to send is retried, every run, before giving up
+
+
+def is_pending(r):
+    """False for a one-time reminder that has already fired."""
+    return not (r.get('fired') and not r.get('recurring'))
+
+
+def settle(r, now):
+    """A due reminder has been dealt with (sent, or given up on): move it on."""
+    if r.get('recurring') and r.get('interval_type') and r.get('interval_value'):
+        # Advance to next occurrence (skip any that are also in the past, or
+        # that land on a weekday the reminder is switched off for)
+        step = (r['interval_type'], r['interval_value'], r.get('days'), zone(r.get('tz')))
+        next_ts = advance_time(r['next_fire'], *step)
+        while next_ts <= now:
+            next_ts = advance_time(next_ts, *step)
+        r['next_fire'] = next_ts
+    else:
+        # One-time reminder: keep briefly (see above) instead of discarding
+        r['fired'] = True
+        r['fired_at'] = now
 
 
 def main():
     if not os.path.exists(DATA_FILE):
         return
 
+    # 1. Read, and pick out what is due. No lock needed: writes are atomic, so
+    #    this is always a whole file.
     with open(DATA_FILE) as f:
         reminders = json.load(f)
-
     now = int(time.time())
-    kept = []
+    due = [r for r in reminders if is_pending(r) and r['next_fire'] <= now]
 
-    for r in reminders:
-        if r.get('fired') and not r.get('recurring'):
-            # Already fired, one-time — keep briefly so the Reschedule
-            # action button still resolves, but never re-fire it.
-            if now - r.get('fired_at', 0) < RESCHEDULE_GRACE_SECONDS:
-                kept.append(r)
-            continue
-
-        if r['next_fire'] > now:
-            kept.append(r)
-            continue
-
-        # Due — fire it
-        fired = send_notification(r)
+    # 2. Send. This is the slow part (a timeout per unreachable send), so the
+    #    lock is not held. Outcomes are keyed by id *and* fire time, so an edit
+    #    made while we were sending doesn't get settled as if it had been sent.
+    outcomes = {}
+    for r in due:
+        sent = send_notification(r)
         ts = datetime.fromtimestamp(r['next_fire']).strftime('%Y-%m-%d %H:%M')
-        status = 'sent' if fired else 'failed'
-        print(f"[{status.upper()}] [{ts}] {r['message'][:60]}")
+        print(f"[{'SENT' if sent else 'FAILED'}] [{ts}] {r['message'][:60]}")
+        outcomes[(r['id'], r['next_fire'])] = sent
 
-        if r.get('recurring') and r.get('interval_type') and r.get('interval_value'):
-            # Advance to next occurrence (skip any that are also in the past, or
-            # that land on a weekday the reminder is switched off for)
-            step = (r['interval_type'], r['interval_value'], r.get('days'), zone(r.get('tz')))
-            next_ts = advance_time(r['next_fire'], *step)
-            while next_ts <= now:
-                next_ts = advance_time(next_ts, *step)
-            r['next_fire'] = next_ts
-            kept.append(r)
-        else:
-            # One-time reminder: keep briefly (see above) instead of discarding
-            r['fired'] = True
-            r['fired_at'] = now
+    # 3. Apply the outcomes to the file as it is *now*, under the lock. Whatever
+    #    the web UI added, edited or deleted during step 2 is left as it left it.
+    if not os.path.exists(DATA_FILE):
+        return
+    with locked(DATA_FILE):
+        with open(DATA_FILE) as f:
+            current = json.load(f)
+        now = int(time.time())
+        kept = []
+        changed = False
+
+        for r in current:
+            if not is_pending(r):
+                # Already fired, one-time — keep briefly so the Reschedule
+                # action button still resolves, but never re-fire it.
+                if now - r.get('fired_at', 0) < RESCHEDULE_GRACE_SECONDS:
+                    kept.append(r)
+                else:
+                    changed = True
+                continue
+
+            sent = outcomes.get((r['id'], r['next_fire']))
+            if sent is None:
+                kept.append(r)      # not due when we looked, or changed since
+                continue
+            if not sent:
+                if now - r['next_fire'] < RETRY_WINDOW_SECONDS:
+                    kept.append(r)  # still due, so the next run tries again
+                    continue
+                ts = datetime.fromtimestamp(r['next_fire']).strftime('%Y-%m-%d %H:%M')
+                print(f"[GAVE UP] [{ts}] {r['message'][:60]}")
+            settle(r, now)
+            changed = True
             kept.append(r)
 
-    with open(DATA_FILE, 'w') as f:
-        json.dump(kept, f, indent=2)
+        if changed:
+            write_json(DATA_FILE, kept)
 
 
 if __name__ == '__main__':
