@@ -197,8 +197,11 @@ docker run -d --name ntfy-reminders --restart unless-stopped \
   publish on `127.0.0.1` only, for the reason in [Security notes](#security-notes) — keep it that way
   unless a reverse proxy that authenticates sits in front.
 - **Data** lives in `/app/data` (`reminders.json`, `titles.json`). Mount a volume there or reminders are
-  lost when the container is replaced. A bind mount must be writable by uid 1000 (`chown 1000:1000 ./data`),
-  because the container does not run as root.
+  lost when the container is replaced. A bind mount must be writable by uid 1000 (`chown -R 1000:1000 ./data`,
+  the directory as well as the files in it), because the container does not run as root. If it isn't, the
+  container logs a warning at start; saving keeps working through the existing files but not atomically,
+  and if `reminders.json` itself can't be written the dispatcher refuses to send rather than repeat
+  every reminder every minute.
 - **Timezone**: set `TZ` (for example `TZ=Europe/London` in `.env`). It defaults to UTC, which is what
   monthly repeats and the weekday filter's fallback use. Weekday filters saved from the browser carry
   their own zone and are not affected.

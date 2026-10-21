@@ -96,6 +96,14 @@ def main():
     now = int(time.time())
     due = [r for r in reminders if is_pending(r) and r['next_fire'] <= now]
 
+    # Sending comes before saving the outcome, so if the file can't be saved
+    # every due reminder would go out again on every run. Refuse to send at all.
+    if due and not os.access(DATA_FILE, os.W_OK):
+        uid = os.getuid() if hasattr(os, 'getuid') else '?'
+        print(f"[ERROR] {DATA_FILE} is not writable by this user (uid {uid}); not sending "
+              f"{len(due)} due reminder(s), as they would repeat every minute. Fix its permissions.")
+        raise SystemExit(1)
+
     # 2. Send. This is the slow part (a timeout per unreachable send), so the
     #    lock is not held. Outcomes are keyed by id *and* fire time, so an edit
     #    made while we were sending doesn't get settled as if it had been sent.

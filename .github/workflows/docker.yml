@@ -68,13 +68,36 @@ jobs:
           docker inspect -f '{{json .State.Health}}' reminders
           echo "::error::the container never became healthy"; exit 1
 
+      # A bind mount whose directory the container's user (uid 1000) cannot
+      # write to, while the reminders.json inside it is writable. The first
+      # release of the lock could not cope: it sent every due reminder, crashed
+      # before saving, and sent them all again every minute. The volume used
+      # above is always writable, so this has to be its own run.
+      - name: Same again on a data directory the container cannot write to
+        run: |
+          docker stop reminders
+          mkdir ro-data && echo '[]' > ro-data/reminders.json
+          chmod 666 ro-data/reminders.json
+          sudo chown root:root ro-data && sudo chmod 755 ro-data
+          docker run -d --name reminders-ro --network host -v "$PWD/ro-data:/app/data" \
+            -e NTFY_TOPIC=ci-topic -e NTFY_BASE_URL=http://127.0.0.1:9999 \
+            -e NTFY_REMINDERS_URL=http://reminders.test:5000 reminders-test
+          for i in $(seq 1 30); do curl -fs -o /dev/null http://127.0.0.1:5000/ && break; sleep 1; done
+          docker logs reminders-ro > ro-start.log 2>&1
+          grep -q "is not writable" ro-start.log   # the entrypoint says why
+          python3 tests/ci_smoke.py
+
       - name: Container logs (a traceback anywhere fails the job)
         if: always()
         run: |
-          docker logs reminders 2>&1 | tail -80
-          if docker logs reminders 2>&1 | grep -q Traceback; then
-            echo "::error::traceback in the container logs"; exit 1
-          fi
+          for c in reminders reminders-ro; do
+            docker logs "$c" > "$c.log" 2>&1 || true
+            tail -80 "$c.log"
+            # to a file first: grep -q quitting early would SIGPIPE a pipe under pipefail
+            if grep -q Traceback "$c.log"; then
+              echo "::error::traceback in the logs of $c"; exit 1
+            fi
+          done
 
   publish:
     needs: smoke

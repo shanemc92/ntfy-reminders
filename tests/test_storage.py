@@ -8,6 +8,7 @@ ntfy_store.py, the server taking that lock on every change, and the cron script
 the server wrote while it was sending."""
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -21,11 +22,31 @@ sys.path.insert(0, ROOT)
 os.environ.setdefault('NTFY_TOPIC', 'test-topic')   # ntfy_dispatch refuses to import without one
 
 import ntfy_dispatch   # noqa: E402
+import ntfy_server     # noqa: E402
 import ntfy_store      # noqa: E402
 
 NOW = 1_800_000_000   # an arbitrary fixed "now"
 HOUR = 3600
 RETRY = ntfy_dispatch.RETRY_WINDOW_SECONDS
+POSIX_USER = os.name == 'posix' and os.geteuid() != 0     # root ignores directory permissions
+
+
+def check_lock_excludes(case, path, marker, env=None):
+    """A second process asking for the lock waits until the first lets go."""
+    child = textwrap.dedent('''
+        import sys
+        sys.path.insert(0, sys.argv[1])
+        import ntfy_store
+        with ntfy_store.locked(sys.argv[2]):
+            open(sys.argv[3], 'w').close()
+    ''')
+    with ntfy_store.locked(path):
+        proc = subprocess.Popen([sys.executable, '-c', child, ROOT, path, marker],
+                                env={**os.environ, **(env or {})})
+        time.sleep(1.5)
+        case.assertFalse(os.path.exists(marker), 'child got the lock while it was held')
+    case.assertEqual(proc.wait(timeout=30), 0)
+    case.assertTrue(os.path.exists(marker), 'child never got the lock after release')
 
 
 def reminder(rid='r', **kw):
@@ -178,20 +199,84 @@ class Store(unittest.TestCase):
         self.assertEqual(os.stat(self.path).st_mode & 0o777, 0o640)
 
     def test_the_lock_holds_other_processes_out(self):
-        marker = os.path.join(self.dir, 'acquired')
-        child = textwrap.dedent('''
-            import sys
-            sys.path.insert(0, sys.argv[1])
-            import ntfy_store
-            with ntfy_store.locked(sys.argv[2]):
-                open(sys.argv[3], 'w').close()
-        ''')
+        check_lock_excludes(self, self.path, os.path.join(self.dir, 'acquired'))
+
+
+@unittest.skipUnless(POSIX_USER, 'needs a non-root POSIX user, to make a directory read-only')
+class UnwritableDirectory(unittest.TestCase):
+    """A bind mount whose directory belongs to someone else, with a file inside
+    that we can still change. The first release of the lock needed to create a
+    file in the directory, so on such a mount the dispatcher sent every due
+    reminder, then crashed before saving, and sent them all again next minute."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.data = os.path.join(tmp.name, 'data')
+        self.spare = os.path.join(tmp.name, 'tmp')
+        os.mkdir(self.data)
+        os.mkdir(self.spare)
+        self.path = os.path.join(self.data, 'reminders.json')
+        with open(self.path, 'w') as f:
+            json.dump([reminder()], f)
+        os.chmod(self.data, 0o555)
+        self.addCleanup(os.chmod, self.data, 0o755)
+        p = mock.patch.object(tempfile, 'tempdir', self.spare)     # where the lock falls back to
+        p.start()
+        self.addCleanup(p.stop)
+
+    def read(self):
+        with open(self.path) as f:
+            return json.load(f)
+
+    def test_write_json_rewrites_the_file_in_place(self):
+        ntfy_store.write_json(self.path, ['new'])
+        self.assertEqual(self.read(), ['new'])
+        self.assertEqual(os.listdir(self.data), ['reminders.json'])
+
+    def test_the_lock_falls_back_to_the_temp_dir(self):
         with ntfy_store.locked(self.path):
-            proc = subprocess.Popen([sys.executable, '-c', child, ROOT, self.path, marker])
-            time.sleep(1.5)
-            self.assertFalse(os.path.exists(marker), 'child got the lock while it was held')
-        self.assertEqual(proc.wait(timeout=30), 0)
-        self.assertTrue(os.path.exists(marker), 'child never got the lock after release')
+            pass
+        self.assertEqual(os.listdir(self.data), ['reminders.json'])
+        self.assertTrue(any(n.endswith('.lock') for n in os.listdir(self.spare)))
+
+    def test_the_fallback_lock_still_holds_other_processes_out(self):
+        check_lock_excludes(self, self.path, os.path.join(self.spare, 'acquired'), env={'TMPDIR': self.spare})
+
+    def test_the_dispatcher_sends_once_and_settles(self):
+        clock = [NOW]
+        with mock.patch.object(ntfy_dispatch, 'DATA_FILE', self.path), \
+                mock.patch.object(ntfy_dispatch.time, 'time', side_effect=lambda: clock[0]), \
+                mock.patch.object(ntfy_dispatch, 'send_notification', return_value=True) as send:
+            ntfy_dispatch.main()
+            ntfy_dispatch.main()                        # the next minute
+        self.assertEqual(send.call_count, 1)            # not again
+        self.assertTrue(self.read()[0]['fired'])
+
+    def test_the_server_can_still_edit(self):
+        with mock.patch.object(ntfy_server, 'DATA_FILE', self.path):
+            resp = ntfy_server.app.test_client().put('/reminders/r', json={'message': 'renamed', 'next_fire': NOW})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.read()[0]['message'], 'renamed')
+
+
+class UnwritableFile(DispatcherCase):
+    @unittest.skipIf(hasattr(os, 'geteuid') and os.geteuid() == 0, 'root can write anything')
+    def test_nothing_is_sent_if_the_outcome_could_not_be_saved(self):
+        """Sending then failing to save repeats every reminder every minute."""
+        self.write(reminder())
+        os.chmod(self.path, stat.S_IREAD)
+        self.addCleanup(os.chmod, self.path, stat.S_IREAD | stat.S_IWRITE)
+        with mock.patch.object(ntfy_dispatch, 'send_notification') as send, self.assertRaises(SystemExit):
+            ntfy_dispatch.main()
+        send.assert_not_called()
+
+    @unittest.skipIf(hasattr(os, 'geteuid') and os.geteuid() == 0, 'root can write anything')
+    def test_a_quiet_run_on_an_unwritable_file_is_not_an_error(self):
+        self.write(reminder(next_fire=NOW + HOUR))
+        os.chmod(self.path, stat.S_IREAD)
+        self.addCleanup(os.chmod, self.path, stat.S_IREAD | stat.S_IWRITE)
+        self.run_main(True)     # nothing due, so nothing to lose
 
 
 class ServerLocking(unittest.TestCase):
