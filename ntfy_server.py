@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ntfy Scheduler Server
+ntfy Reminders Server
 Serves the HTML UI and stores reminders to reminders.json.
 Run with: python3 ntfy_server.py
 """
@@ -231,6 +231,6 @@ if __name__ == '__main__':
     # Loopback by default. Only widen this to a LAN address once a firewall rule
     # limits port 5000 to the reverse proxy - the app has no login of its own.
     bind_host = os.environ.get('BIND_HOST', '127.0.0.1')
-    print(f"Starting ntfy Scheduler on http://{bind_host}:5000")
+    print(f"Starting ntfy Reminders on http://{bind_host}:5000")
     print(f"Reminders stored in: {DATA_FILE}")
     app.run(host=bind_host, port=5000, debug=False)

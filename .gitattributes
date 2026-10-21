@@ -1,0 +1,3 @@
+# A CRLF checkout (core.autocrlf on Windows) would break the shebang and fail
+# the container at start.
+*.sh text eol=lf

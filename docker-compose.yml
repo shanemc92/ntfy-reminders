@@ -1,0 +1,27 @@
+services:
+  reminders:
+    # Published image - docker compose pull && up -d uses this directly.
+    # docker compose up --build uses the Dockerfile instead and tags the
+    # result with this same name.
+    image: ghcr.io/shanemc92/ntfy-reminders:latest
+    build: .
+    restart: unless-stopped
+    # NTFY_TOPIC and the rest of the settings. Compose stops with an error if
+    # this file is missing: cp .env.example .env
+    env_file: .env
+    environment:
+      # Monthly repeats and the weekday filter's fallback read the server's
+      # clock, so set this to your own zone, e.g. TZ=Europe/London in .env.
+      TZ: ${TZ:-UTC}
+    volumes:
+      - reminders_data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      # Loopback only: the app has no login of its own, so put a reverse proxy
+      # that authenticates (or a VPN) in front of it. BIND_HOST has no effect
+      # in the container - this mapping is what decides who can reach the port.
+      - "127.0.0.1:5000:5000"
+
+volumes:
+  reminders_data:

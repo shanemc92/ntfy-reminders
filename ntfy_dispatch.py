@@ -22,8 +22,8 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 NTFY_BASE_URL   = os.environ.get('NTFY_BASE_URL', 'https://ntfy.sh')
 TOPIC           = os.environ['NTFY_TOPIC']       # required — no fallback
-NTFY_TITLE      = 'ntfy Scheduler'                # fallback if reminder has no title
-SCHEDULER_URL   = os.environ.get('NTFY_SCHEDULER_URL', '').rstrip('/')
+NTFY_TITLE      = 'ntfy Reminders'                # fallback if reminder has no title
+REMINDERS_URL   = os.environ.get('NTFY_REMINDERS_URL', '').rstrip('/')
 ICON_URL        = os.environ.get('NTFY_ICON_URL', '').strip()
 DATA_FILE       = os.path.join(BASE_DIR, 'data', 'reminders.json')
 # ─────────────────────────────────────────────────────────────────────────────
@@ -45,8 +45,8 @@ def send_notification(reminder: dict) -> bool:
         headers['Tags'] = reminder['tag']
     if ICON_URL:
         headers['Icon'] = ICON_URL
-    if SCHEDULER_URL:
-        headers['Actions'] = f"view, Reschedule, {SCHEDULER_URL}/?reschedule={reminder['id']}"
+    if REMINDERS_URL:
+        headers['Actions'] = f"view, Reschedule, {REMINDERS_URL}/?reschedule={reminder['id']}"
     try:
         resp = requests.post(url, data=reminder['message'].encode('utf-8'),
                              headers=headers, timeout=10)

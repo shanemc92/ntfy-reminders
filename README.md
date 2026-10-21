@@ -1,6 +1,6 @@
-# ntfy Scheduler
+# ntfy Reminders
 
-A self-hosted notification scheduler for [ntfy](https://ntfy.sh) with support for one-time and recurring reminders. Reminders are persisted to a local JSON file and dispatched via cron, so they survive server restarts and updates.
+A self-hosted reminder app for [ntfy](https://ntfy.sh) with support for one-time and recurring reminders. Reminders are persisted to a local JSON file and dispatched via cron (or the bundled Docker image), so they survive server restarts and updates.
 
 ## Screenshot
 ![Screenshot](docs/screenshot.png)
@@ -8,7 +8,7 @@ A self-hosted notification scheduler for [ntfy](https://ntfy.sh) with support fo
 ## Structure
 
 ```
-ntfy-scheduler/
+ntfy-reminders/
 ├── ntfy_server.py             Flask server — serves the UI and exposes the REST API
 ├── ntfy_dispatch.py           Cron script — fires due reminders, reschedules recurring ones
 ├── ntfy_schedule.py           Schedule maths shared by both — stepping a repeat forward, the weekday filter
@@ -23,6 +23,10 @@ ntfy-scheduler/
 ├── docs/
 │   └── screenshot.png
 ├── tests/                     Unit tests — python -m unittest discover -s tests
+│   └── ci_smoke.py            End-to-end check of the container, run by CI
+├── Dockerfile                 Container image (see Docker below)
+├── docker-entrypoint.sh       Starts the dispatcher loop, then the web server
+├── docker-compose.yml
 ├── .env                       Your config — topic, base URL, and optional extras (see below)
 ├── .env.example
 └── requirements.txt
@@ -32,13 +36,14 @@ ntfy-scheduler/
 
 - Python 3.8+
 - Ubuntu (or any Linux with cron)
+- or Docker, which needs neither — see [Docker](#docker)
 
 ## Setup
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/ntfy-scheduler.git
-cd ntfy-scheduler
+git clone https://github.com/shanemc92/ntfy-reminders.git
+cd ntfy-reminders
 
 # Create and activate a virtual environment
 python3 -m venv venv
@@ -69,7 +74,7 @@ BIND_HOST=127.0.0.1
 
 # LAN address of this app, used to build the notification's "Reschedule" action button.
 # Leave blank to disable that button.
-NTFY_SCHEDULER_URL=http://your-server:5000
+NTFY_REMINDERS_URL=http://your-server:5000
 
 # Optional PNG shown as the notification icon
 NTFY_ICON_URL=http://your-server:5000/static/icon.png
@@ -115,7 +120,7 @@ python3 ntfy_server.py
 
 Then open `http://localhost:5000` in your browser.
 
-To pick up code or `.env` changes, restart it: `Ctrl+C` then re-run, or `sudo systemctl restart ntfy-scheduler` if you've set it up as a service (see below). The cron-run dispatcher doesn't need restarting — it re-reads `.env` and `reminders.json` fresh every run.
+To pick up code or `.env` changes, restart it: `Ctrl+C` then re-run, or `sudo systemctl restart ntfy-reminders` if you've set it up as a service (see below). The cron-run dispatcher doesn't need restarting — it re-reads `.env` and `reminders.json` fresh every run.
 
 ## Cron Setup
 
@@ -131,9 +136,9 @@ The dispatcher runs every minute and checks for due reminders. The `@reboot` lin
 ### Optional: systemd (more robust)
 
 ```ini
-# /etc/systemd/system/ntfy-scheduler.service
+# /etc/systemd/system/ntfy-reminders.service
 [Unit]
-Description=ntfy Scheduler
+Description=ntfy Reminders
 After=network.target
 
 [Service]
@@ -146,9 +151,61 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-sudo systemctl enable ntfy-scheduler
-sudo systemctl start ntfy-scheduler
+sudo systemctl enable ntfy-reminders
+sudo systemctl start ntfy-reminders
 ```
+
+## Docker
+
+A multi-arch image (`linux/amd64`, `linux/arm64`) is published to the GitHub Container Registry:
+
+```
+ghcr.io/shanemc92/ntfy-reminders
+```
+
+Tags: `latest` (the `main` branch), `1.2.3` / `1.2` / `1` for releases, and the short commit SHA.
+
+One container runs both halves: the web server (gunicorn) and the dispatcher, which a background loop in
+`docker-entrypoint.sh` runs at the top of every minute. The cron job above is not needed. The container
+refuses to start if `NTFY_TOPIC` is not set.
+
+### Compose
+
+```bash
+cp .env.example .env      # set NTFY_TOPIC, and TZ (see below)
+docker compose up -d
+```
+
+Then open `http://localhost:5000`. To update: `docker compose pull && docker compose up -d`. To build the
+image from this checkout instead of pulling it: `docker compose up -d --build`.
+
+### docker run
+
+```bash
+docker run -d --name ntfy-reminders --restart unless-stopped \
+  --env-file .env \
+  -v ntfy-reminders-data:/app/data \
+  -p 127.0.0.1:5000:5000 \
+  ghcr.io/shanemc92/ntfy-reminders:latest
+```
+
+### Things to know
+
+- **Settings** come from `.env` (`--env-file` takes values literally, so leave them unquoted).
+  `BIND_HOST` has no effect in the container; the published port decides who can reach it. Both examples
+  publish on `127.0.0.1` only, for the reason in [Security notes](#security-notes) — keep it that way
+  unless a reverse proxy that authenticates sits in front.
+- **Data** lives in `/app/data` (`reminders.json`, `titles.json`). Mount a volume there or reminders are
+  lost when the container is replaced. A bind mount must be writable by uid 1000 (`chown 1000:1000 ./data`),
+  because the container does not run as root.
+- **Timezone**: set `TZ` (for example `TZ=Europe/London` in `.env`). It defaults to UTC, which is what
+  monthly repeats and the weekday filter's fallback use. Weekday filters saved from the browser carry
+  their own zone and are not affected.
+- **One web worker, on purpose.** Reminders are a JSON file read, changed and rewritten with no locking, so
+  the server handles one request at a time rather than letting two saves overwrite each other.
+- **Maintainers:** the `docker` workflow builds and smoke-tests the image on every push and pull request,
+  and publishes from `main` and from `v*.*.*` tags. After the first publish, check the package is set to
+  public under the repository's *Packages* settings if you want unauthenticated pulls.
 
 ## Features
 
